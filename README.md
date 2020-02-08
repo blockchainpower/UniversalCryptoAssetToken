@@ -1,7 +1,5 @@
 Universal Crypto Asset Token(UCAT)
 
-For any questions, contributions or feedback join our dedicated telegram group: https://t.me/eosionft
-
 Simple Summary
 A standard interface for cross chain non-fungible tokens(NFT).
 
