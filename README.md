@@ -21,9 +21,6 @@ This standard is inspired by the eosio.token standard. eosio.token is insufficie
 Specification
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
 
-/// @title eosio.nft public interface
-/// @dev See https://github.com/blockchainpower/UniversalCryptoAssetToken/blob/master/README.md
-
 ```
 #include <eosiolib/asset.hpp>
 #include <eosiolib/contract.hpp>
