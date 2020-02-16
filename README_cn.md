@@ -100,30 +100,30 @@ private:
     using token_list = eosio::multi_index<TOKEN_TABLE_NAME, token>;
 
  
-    // @abi table accountinfo i64
-    struct accountinfo {
+    // @abi table accounts i64
+    struct account {
         account_name id;
 
-        accountinfo() = default;
+        account() = default;
 
         uint64_t tokenCount;
 
         std::string info;
 
-        EOSLIB_SERIALIZE(accountinfo, (id)(tokenCount)(info))
+        EOSLIB_SERIALIZE(account, (id)(tokenCount)(info))
 
         account_name primary_key() const { return id; }
     };
-    static constexpr account_name ACCOUNT_TABLE_NAME = N(accountinfo);
-    using account_list = eosio::multi_index<ACCOUNT_TABLE_NAME, accountinfo>;
+    static constexpr account_name ACCOUNT_TABLE_NAME = N(account);
+    using account_list = eosio::multi_index<ACCOUNT_TABLE_NAME, account>;
 
     // @abi table log i64
     struct log {
         uint64_t id;
-	    account_name from;
-	    account_name to;
-	    std::string memo;
-	    uint64_t acttime;
+	account_name from;
+	account_name to;
+	std::string memo;
+	uint64_t acttime;
 
         log() = default;
 
@@ -133,6 +133,120 @@ private:
     };
     static constexpr uint64_t LOG_TABLE_NAME = N(log);
     using log_list = eosio::multi_index<LOG_TABLE_NAME, log>;
+
+ private:
+    account_list accounts;
+    token_list tokens;
+    log_list logs;
+    sysparam_list sysparams;
+    
+ private:
+     account_name get_admin() const {
+         const std::string adminAccount = getsysparam(SYSPARAM_ADMIN_ACCOUNT);
+         if (adminAccount.empty()) {
+             return _self;
+         }
+         else {
+             return eosio::string_to_name(adminAccount.c_str());
+         }
+     }
+
+     void require_auth_admin() const { eosio::require_auth(get_admin()); }
+     
+     inline std::string getsysparam(const uint64_t& key) const {
+       auto iter = sysparams.find(key);
+       if(iter == sysparams.end()){
+	        return std::string("");
+       }else{
+	        return iter->value;
+       }
+    }
+
+    
+    inline void setsysparam(const uint64_t& key, const std::string& val){
+	    auto iter = sysparams.find(key);
+	    if(iter == sysparams.end()){
+		    sysparams.emplace(_self, [&](auto& p) {
+		        p.id = key;
+		        p.value=val;
+		    });
+	    }else{
+		    sysparams.modify(sysparams.begin(), _self, [&](auto& p) {
+			    p.value = val;
+		    });
+	    }
+    }
+
+    inline void addaccounttoken(const account_name& user) {
+        auto iter = accounts.find(user);
+        if (iter == accounts.end()) {
+            accounts.emplace(_self, [&](auto& p) {
+                p.id = user;
+                p.tokenCount = 1;
+                });
+        }
+        else {
+            accounts.modify(accounts.begin(), _self, [&](auto& p) {
+                p.tokenCount += 1;
+            });
+        }
+    }
+
+    inline void subaccounttoken(const account_name& user) {
+        auto iter = accounts.find(user);
+        if (iter == accounts.end()) {
+            accounts.emplace(_self, [&](auto& p) {
+                p.id = user;
+                p.tokenCount = 0;
+                });
+        }
+        else {
+            accounts.modify(accounts.begin(), _self, [&](auto& p) {
+                if (p.tokenCount > 1){
+                    p.tokenCount -= 1;
+                }else{
+                    p.tokenCount = 0;
+                }
+           });
+        }
+    }
+    
+    inline uint64_t toInt(const std::string& str) {
+        if (str.empty()) {
+            return 0;
+        }
+        else {
+            std::string::size_type sz = 0;
+            return std::stoull(str, &sz, 0);
+        }
+    }
+
+
+    inline log getlog(const uint64_t id) const {
+        auto iter = logs.find(id);
+        return *iter;
+    }
+    
+    inline uint64_t getminlogid() {
+        return toInt(getsysparam(SYSPARAM_MIN_LOG_ID));
+    }
+    
+    inline uint64_t getmaxlogid() {
+        return toInt(getsysparam(SYSPARAM_MIN_LOG_ID));
+    }
+
+    inline void setminlogid(const uint64_t id) {
+        setsysparam(SYSPARAM_MIN_LOG_ID, std::to_string(id));
+    }
+
+    inline void setmaxlogid(const uint64_t id) {
+        setsysparam(SYSPARAM_MAX_LOG_ID, std::to_string(id));
+    }
+
+    void logoperator(const uint64_t& id, const account_name& oldowner, const account_name& newowner, const std::string& opcode);
+
+    void clearlog();
+
 
  public:
  
