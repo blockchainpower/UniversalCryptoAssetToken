@@ -17,27 +17,6 @@ void eosnft::setparam(const uint64_t id, const std::string tag, const std::strin
 	setsysparam(id, tag, val);
 }
 
-void eosnft::rmaccount(const account_name acc){
-	require_auth_contract();
-	accounts.erase(accounts.find(acc));
-}
-
-void eosnft::rmtoken(const uint64_t id){
-	require_auth_contract();
-	auto iter = tokens.find(id);
-	eosio_assert(iter != tokens.end(), "asset not exisit");
-
-	migratecheck(id);
-
-	if(iter->owner != get_admin()){
-		subaccounttoken(iter->owner);
-	}
-	tokens.erase(tokens.find(id));
-	subtokencount();
-
-	logoperator(id, get_admin(), get_admin(), "REMOVE", "");
-}
-
 // @abi action
 void eosnft::burn(const uint64_t id){
 	require_auth_admin();
@@ -207,7 +186,7 @@ void eosnft::
     if (contract == _self) {
         auto& thiscontract = *this;
         switch (action) {
-            EOSIO_API(eosnft, (create)(assign)(reassign)(updatemeta)(updatelock)(transfer)(init)(burn)(applymigrate)(apprmigrate)(addblack)(rmblack)(rmtoken)(rmaccount)(setparam)(rmparam)(rmlog))
+            EOSIO_API(eosnft, (create)(assign)(reassign)(updatemeta)(updatelock)(transfer)(init)(burn)(applymigrate)(apprmigrate)(addblack)(rmblack)(setparam)(rmlog))
         }
     }
 }
