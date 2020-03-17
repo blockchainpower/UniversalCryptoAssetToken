@@ -46,6 +46,8 @@
 #define SYSPARAM_MAX_LOG_ID         3
 #define SYSPARAM_ADMIN_ACCOUNT      4
 #define API_URL			    5
+#define CONTRACT_NAME		    6
+#define CONTRACT_LOGO		    7
 
 
 
@@ -56,7 +58,9 @@ public:
         sysparams(_self, _self),
         logs(_self, _self),
         tokens(_self, _self),
-        accounts(_self, _self)
+        accounts(_self, _self),
+	migrates(_self, _self),
+	blacklists(_self,_self)
     {
     }
 
@@ -136,12 +140,36 @@ private:
     static constexpr uint64_t LOG_TABLE_NAME = N(logs);
     using log_list = eosio::multi_index<LOG_TABLE_NAME, logs>;
 
+    // @abi table blacklist i64
+    struct blacklist{
+        account_name	id;
+
+        EOSLIB_SERIALIZE(blacklist, (id))
+
+        account_name primary_key() const { return id; }
+    };
+    static constexpr account_name BLACKLIST_TABLE_NAME = N(blacklist);
+    using blacklist_list = eosio::multi_index<BLACKLIST_TABLE_NAME, blacklist>;
+
+    // @abi table migrate i64
+    struct migrate{
+        uint64_t	id;
+	std::string	target;
+
+        EOSLIB_SERIALIZE(migrate, (id)(target))
+
+        uint64_t primary_key() const { return id; }
+    };
+    static constexpr uint64_t MIGRATE_TABLE_NAME = N(migrate);
+    using migrate_list = eosio::multi_index<MIGRATE_TABLE_NAME, migrate>;
+
  private:
     account_list accounts;
     token_list tokens;
     log_list logs;
     sysparam_list sysparams;
-    
+    migrate_list migrates;
+    blacklist_list blacklists;
  private:
      account_name get_admin() const {
          const std::string adminAccount = getsysparam(SYSPARAM_ADMIN_ACCOUNT);
@@ -178,6 +206,7 @@ private:
 	    }else{
 		    sysparams.modify(iter, _self, [&](auto& p) {
 			    p.value = val;
+			    p.tag = tag;
 		    });
 	    }
     }
@@ -237,7 +266,7 @@ private:
     }
 
     inline void setmaxlogid(const uint64_t id) {
-        setsysparam(SYSPARAM_MAX_LOG_ID, "SYSPARAM_MIN_LOG_ID", std::to_string(id));
+        setsysparam(SYSPARAM_MAX_LOG_ID, "SYSPARAM_MAX_LOG_ID", std::to_string(id));
     }
 
     void logoperator(const uint64_t& id, const account_name& oldowner, const account_name& newowner, const std::string& opcode, const std::string& ext);
@@ -259,18 +288,33 @@ private:
 	}
     }
 
+    inline void migratecheck(uint64_t id){
+        auto iter = migrates.find(id);
+	eosio_assert(iter == migrates.end(), "id is in migrates");
+    }
+
+    inline void blackcheck(const account_name acc){
+	auto iter = blacklists.find(acc);
+	eosio_assert(iter == blacklists.end(), "acc is in black");
+    }
+
 
  public:
 
      // @abi action
-    void init(const std::string adminacc, const std::string apiUrl){
+    void init(const std::string adminacc, const std::string apiUrl, const std::string name, const std::string image){
 	require_auth_contract();
 	setsysparam(SYSPARAM_ADMIN_ACCOUNT, "SYSPARAM_ADMIN_ACCOUNT", adminacc);
 	setsysparam(API_URL, "API_URL", apiUrl);
+	setsysparam(CONTRACT_NAME, "CONTRACT_NAME", name);	
+	setsysparam(CONTRACT_LOGO, "CONTRACT_LOGO", image);	
     }
  
     // @abi action
     void assign(const uint64_t id, const account_name newowner);
+
+    // @abi action
+    void reassign(const uint64_t id, const account_name newowner);
     
     // @abi action
     void create(const uint64_t id, const std::string uuid, const std::string category, const std::string name, const std::string imageUrl, const std::string meta, const bool lock, const std::string ext);
@@ -287,19 +331,8 @@ private:
     // @abi action
     void setparam(const uint64_t id, const std::string tag, const std::string val);
 
-    //---- debug 
-    
     // @abi action
-    void rmtoken(const uint64_t id);
-
-    // @abi action
-    void rmaccount(const account_name acc);
-
-    // @abi action
-    void rmparam(const uint64_t id){
-	require_auth_contract();
-	sysparams.erase(sysparams.find(id));
-    }
+    void burn(const uint64_t id);
 
     // @abi action
     void rmlog(const uint64_t id){
@@ -307,8 +340,34 @@ private:
 	logs.erase(logs.begin());
     }
 
-    //---
+    // @abi action
+    void applymigrate(const uint64_t id, const std::string target);
 
+    // @abi action
+    void apprmigrate(const uint64_t id, const bool approve){
+	require_auth_admin();
+	
+	migrates.erase(migrates.find(id));
+	
+	if(approve){
+	   burn(id);
+	}
+    }
+
+    // @abi action
+    void addblack(const account_name acc){
+	require_auth_admin();
+	blackcheck(acc);
+	blacklists.emplace(_self, [&](auto& p) {
+		p.id = acc;
+	});
+    }
+
+    // @abi action
+    void rmblack(const account_name acc){
+	require_auth_admin();
+	blacklists.erase(blacklists.find(acc));
+    }
 };
 
 ```
