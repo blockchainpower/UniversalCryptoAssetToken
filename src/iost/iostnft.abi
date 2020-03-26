@@ -73,6 +73,12 @@
       ]
     },
     {
+      "name": "rmtoken",
+      "args": [
+          "number"
+      ]
+    },
+    {
       "name": "ownerOf",
       "args": [
           "number"
@@ -110,7 +116,21 @@
       "name": "applymigrate",
       "args": [
           "number",
+          "string",
           "string"
+      ]
+    },
+    {
+      "name": "apprmigrate",
+      "args": [
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "burn",
+      "args": [
+          "number"
       ]
     }
 
