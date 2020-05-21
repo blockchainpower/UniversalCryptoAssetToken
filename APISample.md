@@ -19,3 +19,6 @@
   
   //getAccountAssets
   https://nftapi.xpet.io/api/getAccountAsset.do?contract=Contract2KjwsH42mBSG6Uz3usDxqXUjMnadBBZPtfwjGQvxyRMU&chainType=IOST&account=qh1wvzslnpr&appKey=&page=0&size=100
+```
+# META DEMO
+  https://docs-1251625178.cos.ap-guangzhou.myqcloud.com/XPET_NFT_META_SAMPLE.pdf
