@@ -48,11 +48,11 @@ public:
    using contract::contract;
 
    TABLE sysparam{
-	uint64_t	id;
-	std::string	tag;
-	std::string	val;
+        uint64_t	id;
+        std::string	tag;
+        std::string	val;
 
-	uint64_t primary_key() const { return id; }
+        uint64_t primary_key() const { return id; }
    };
    typedef multi_index<"sysparams"_n, sysparam> sysparam_index;
     
@@ -69,73 +69,62 @@ public:
 
     TABLE token {
         uint64_t id;
-	std::string uuid;
+	    std::string uuid;
         std::string title;
-	name owner;
-	std::string imageUrl;
-	std::string category;
-	std::string ext;
-	std::string meta;
+        name owner;
+        std::string imageUrl;
+        std::string category;
+        std::string ext;
+        std::string meta;
+        bool	   lock;
 
-	bool	   lock;
-	asset	   stackasset;
-	uint64_t   level;
+        //--ext-prop for this contract
+        uint64_t	level;
+        time_point_sec	stackexpire;
 
+        asset		stackasset;
+        name		stacktoken;
         uint64_t primary_key() const { return id; }
-	uint64_t get_secondary_1() const { return owner.value;}
+	    uint64_t get_secondary_1() const { return owner.value;}
     };
    typedef multi_index<"tokens"_n, token> token_index;
 
 
     TABLE logs {
         uint64_t id;
-	name from;
-	name to;
-	std::string memo;
-	uint64_t acttime;
-	uint64_t tokenId;
+        name from;
+        name to;
+        std::string memo;
+        uint64_t acttime;
+        uint64_t tokenId;
         uint64_t primary_key() const { return id; }
     };
     typedef multi_index<"logs"_n, logs> log_index;
 
-    TABLE blacklist{
-        name	id;
-
-        uint64_t primary_key() const { return id.value; }
-    };
-    typedef multi_index<"blacklists"_n, blacklist> blacklist_index;
-
-    TABLE notifylist{
-	name acc;
-
-	uint64_t primary_key() const { return acc.value; }
-    };
-    typedef multi_index<"notifylists"_n, notifylist> notifylist_index;
 
  private:
 
-     double stringtodouble(std::string str)
-     {
-	 double dTmp = 0.0;
-	 int iLen = str.length();
-	 int iPos = str.find(".");
-	 std::string strIntege = str.substr(0,iPos);
-	 std::string strDecimal = str.substr(iPos + 1,iLen - iPos - 1 );
-	 for (int i = 0; i < iPos;i++)
-	 {
-	  if (strIntege[i] >= '0' && strIntege[i] <= '9')
-	  {
-	   dTmp = dTmp * 10 + strIntege[i] - '0';
-	  }
-	 }
-	 for (int j = 0; j < strDecimal.length(); j++)
-	 {
-	  if (strDecimal[j] >= '0' && strDecimal[j] <= '9')
-	  {
-	   dTmp += (strDecimal[j] - '0') * pow(10.0,(0 - j - 1));
-	  }
-	 }
-	 return dTmp;
+     double stringtodouble(std::string str) {
+        double dTmp = 0.0;
+        int iLen = str.length();
+        int iPos = str.find(".");
+        std::string strIntege = str.substr(0,iPos);
+        std::string strDecimal = str.substr(iPos + 1,iLen - iPos - 1 );
+        for (int i = 0; i < iPos;i++)
+        {
+        if (strIntege[i] >= '0' && strIntege[i] <= '9')
+        {
+        dTmp = dTmp * 10 + strIntege[i] - '0';
+        }
+        }
+        for (int j = 0; j < strDecimal.length(); j++)
+        {
+        if (strDecimal[j] >= '0' && strDecimal[j] <= '9')
+        {
+        dTmp += (strDecimal[j] - '0') * pow(10.0,(0 - j - 1));
+        }
+        }
+        return dTmp;
      }
 
 
@@ -154,13 +143,13 @@ public:
      void require_auth_contract() const { require_auth( _self );}
      
      inline std::string getsysparam(const uint64_t& key) const {
-	sysparam_index sysparams(_self, _self.value);
-	auto iter = sysparams.find(key);
-	if(iter == sysparams.end()){
-	        return std::string("");
-	}else{
-	        return iter->val;
-	}
+        sysparam_index sysparams(_self, _self.value);
+        auto iter = sysparams.find(key);
+        if(iter == sysparams.end()){
+                return std::string("");
+        }else{
+                return iter->val;
+        }
     }
 
     
@@ -182,7 +171,7 @@ public:
     }
 
     inline void addaccounttoken(const name user) {
-	account_index accounts(_self, _self.value);
+	    account_index accounts(_self, _self.value);
         auto iter = accounts.find(user.value);
         if (iter == accounts.end()) {
             accounts.emplace(_self, [&](auto& p) {
@@ -198,21 +187,21 @@ public:
     }
 
     inline void subaccounttoken(const name user) {
-	account_index accounts(_self, _self.value);
-        auto iter = accounts.find(user.value);
-        if (iter == accounts.end()) {
-            return ;
+        account_index accounts(_self, _self.value);
+            auto iter = accounts.find(user.value);
+            if (iter == accounts.end()) {
+                return ;
+            }
+            
+        if(iter->count > 1){
+                accounts.modify(iter, _self, [&](auto& p) {
+                    if (p.count > 1){
+                        p.count -= 1;
+                    }
+            });
+            }else{
+        accounts.erase(iter);
         }
-        
-	if(iter->count > 1){
-            accounts.modify(iter, _self, [&](auto& p) {
-                if (p.count > 1){
-                    p.count -= 1;
-                }
-           });
-        }else{
-	   accounts.erase(iter);
-	}
     }
     
     inline uint64_t toInt(const std::string& str) {
@@ -229,37 +218,32 @@ public:
 
     
     inline uint64_t gettokencount(){
-	return toInt(getsysparam(SYSPARAM_TOKEN_COUNT));
+	    return toInt(getsysparam(SYSPARAM_TOKEN_COUNT));
     }
 
 
     inline void addtokencount(){
-	setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(gettokencount() + 1));
+	    setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(gettokencount() + 1));
     }
 
     inline void subtokencount(){
         uint64_t tokencount = gettokencount();
-	if(tokencount > 0){
-	    setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(tokencount - 1));
-	}
+        if(tokencount > 0){
+            setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(tokencount - 1));
+        }
     }
 
-    inline void blackcheck(const name acc){
-	blacklist_index blacklists(_self, _self.value);
-	auto iter = blacklists.find(acc.value);
-	check(iter == blacklists.end(), "acc is in black");
-    }
 
 
  public:
 
      [[eosio::action]]
     void init(const std::string adminacc, const std::string apiUrl, const std::string title, const std::string image){
-	require_auth_contract();
-	setsysparam(SYSPARAM_ADMIN_ACCOUNT, "SYSPARAM_ADMIN_ACCOUNT", adminacc);
-	setsysparam(API_URL, "API_URL", apiUrl);
-	setsysparam(CONTRACT_NAME, "CONTRACT_NAME", title);	
-	setsysparam(CONTRACT_LOGO, "CONTRACT_LOGO", image);	
+        require_auth_contract();
+        setsysparam(SYSPARAM_ADMIN_ACCOUNT, "SYSPARAM_ADMIN_ACCOUNT", adminacc);
+        setsysparam(API_URL, "API_URL", apiUrl);
+        setsysparam(CONTRACT_NAME, "CONTRACT_NAME", title);	
+        setsysparam(CONTRACT_LOGO, "CONTRACT_LOGO", image);	
     }
  
     [[eosio::action]]
@@ -269,7 +253,8 @@ public:
     void reassign(const uint64_t id, const name newowner);
     
     [[eosio::action]]
-    void create(const uint64_t id, const std::string uuid, const std::string category, const std::string title, const std::string imageUrl, const std::string meta, const bool lock, const std::string ext);
+    void create(const uint64_t id, const std::string uuid, const std::string category, 
+        std::string title, std::string imageUrl, std::string meta, const bool lock, const std::string ext,  const uint64_t level);
 
     [[eosio::action]]
     void updatemeta(const uint64_t id, const std::string title, const std::string category, const std::string imageUrl, const std::string meta);
@@ -294,51 +279,44 @@ public:
 
     [[eosio::action]]
     void burn(const uint64_t id){
-	token_index tokens(_self, _self.value);
-
-	auto iter = tokens.find(id);
-	check(iter != tokens.end(), "token not found");
-
-	require_auth( iter->owner);
-
-	rmtoken_(id);
+        require_auth_admin();
+        rmtoken_(id);
     }
+
 
     [[eosio::action]]
-    void addblack(const name acc){
-	require_auth_contract();
-	blacklist_index blacklists(_self, _self.value);
-	blacklists.emplace(_self, [&](auto& p) {
-		p.id = acc;
-	});
+    void stackasset(const uint64_t id, const asset quantity, const time_point_sec stackexpire){
+        require_auth_admin();
+        token_index tokens(_self, _self.value);
+        auto iter = tokens.find(id);
+        check(iter != tokens.end(), "token not found");
+        tokens.modify(iter, _self, [&](auto& p) {
+                    p.stackasset = quantity;
+                    p.stackexpire = stackexpire;
+        });
     }
 
-    [[eosio::action]]
-    void rmblack(const name acc){
-	require_auth_contract();
-	blacklist_index blacklists(_self, _self.value);
-	blacklists.erase(blacklists.find(acc.value));
-    }
+
     //---- for debug 
     
     [[eosio::action]]
     void rmtoken(const uint64_t id){
-	require_auth_contract();
-	rmtoken_(id);
+        require_auth_contract();
+        rmtoken_(id);
     }
 
     [[eosio::action]]
     void rmaccount(const name acc){
-	require_auth_contract();
-	account_index accounts(_self, _self.value);
-	accounts.erase(accounts.find(acc.value));
+        require_auth_contract();
+        account_index accounts(_self, _self.value);
+        accounts.erase(accounts.find(acc.value));
     }
 
     [[eosio::action]]
     void rmparam(const uint64_t id){
-	require_auth_contract();
-	sysparam_index sysparams(_self, _self.value);
-	sysparams.erase(sysparams.find(id));
+        require_auth_contract();
+        sysparam_index sysparams(_self, _self.value);
+        sysparams.erase(sysparams.find(id));
     }
 
 private:
@@ -362,25 +340,20 @@ private:
         const eosio::asset& amount,
         const std::string& memo)
     {
-        if (from == to)
-            return;
-	if (amount.symbol == TIME_SYMBOL)
-		action(permission_level{_self, "active"_n}, TIME_ACCOUNT, "transfer"_n, std::make_tuple(from, to, amount, memo)).send();
-	else if (amount.symbol == LOOT_SYMBOL)
-		action(permission_level{_self, "active"_n}, LOOT_ACCOUNT, "transfer"_n, std::make_tuple(from, to, amount, memo)).send();
-        else
-            check(false, "only LOOT/TIME supported.");
+		if (from == to)
+		    return;
+		if (amount.symbol == TIME_SYMBOL)
+			action(permission_level{_self, "active"_n}, TIME_ACCOUNT, "transfer"_n, std::make_tuple(from, to, amount, memo)).send();
+		else if (amount.symbol == LOOT_SYMBOL)
+			action(permission_level{_self, "active"_n}, LOOT_ACCOUNT, "transfer"_n, std::make_tuple(from, to, amount, memo)).send();
+		else
+		    check(false, "only LOOT/TIME supported.");
     }
 
-	void notifyall(){
-		notifylist_index notifys(_self, _self.value);
-		auto iter = notifys.begin();
-		while(iter != notifys.end()){
-			require_recipient(iter->acc);
-			iter ++;
-		}
-	}
+    void notify(const name& to){
+		require_recipient(to);
+    }
 
-	void clearlog();
+    void clearlog();
 
 };
