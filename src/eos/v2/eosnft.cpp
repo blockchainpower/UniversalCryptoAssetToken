@@ -1,6 +1,7 @@
 #include "eosnft.hpp"
 
-void eosnft::create(const uint64_t id, const std::string uuid, const std::string category, std::string title, std::string imageUrl, std::string meta, const bool lock, const std::string ext){
+void eosnft::create(const uint64_t id, const std::string uuid, const std::string category, std::string title,
+ 	std::string imageUrl, std::string meta, const bool lock, const std::string ext,  const uint64_t level){
 	require_auth_admin();
 
 	token_index tokens(_self, _self.value);
@@ -18,6 +19,7 @@ void eosnft::create(const uint64_t id, const std::string uuid, const std::string
 		p.uuid = uuid;
 		p.lock = lock;
 		p.ext = ext;
+		p.level = level;
 		});
 	addtokencount();
 
@@ -153,8 +155,6 @@ void eosnft::transfer(const uint64_t id, name newowner, const std::string memo){
     check(iter != tokens.end(), "unknow asset");
 	check(!iter->lock, "asset is locked");
 
-	blackcheck(iter->owner);
-
     eosio::require_auth(iter->owner);
 	name oldowner = iter->owner;
 
@@ -169,5 +169,5 @@ void eosnft::transfer(const uint64_t id, name newowner, const std::string memo){
 
 	log(id, oldowner, newowner, "TRANSFER", memo);
 
-	notifyall();
+	notify(newowner);
 }
