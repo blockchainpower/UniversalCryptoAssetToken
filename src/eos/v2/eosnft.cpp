@@ -142,12 +142,12 @@ void eosnft::updateext(const uint64_t id, const std::string ext){
 	log(id, iter->owner, iter->owner, "UPDATE", "");
 }
 
-void eosnft::transmk(const uint64_t id, const name newowner, const std::string memo){
-	transfer(id,newowner,memo);
+void eosnft::transmk(const uint64_t id, const name from, const name to, const std::string memo){
+	transfer(id, from, to, memo);
 }
 
-void eosnft::transfer(const uint64_t id, name newowner, const std::string memo){
-	check(is_account(newowner), "new owner should be an account");
+void eosnft::transfer(const uint64_t id, const name from, const name to, const std::string memo){
+	check(is_account(to), "new owner should be an account");
 
 	token_index tokens(_self, _self.value);
     auto iter = tokens.find(id);
@@ -158,16 +158,17 @@ void eosnft::transfer(const uint64_t id, name newowner, const std::string memo){
     eosio::require_auth(iter->owner);
 	name oldowner = iter->owner;
 
-	check(oldowner != newowner, "asset aleady yours");
+	check(oldowner != to, "asset aleady yours");
+	check(from == iter->owner, "owner unmatch");
 
 	tokens.modify(iter, _self, [&](auto& p) {
-        p.owner = newowner;
+        p.owner = to;
     });
 
 	subaccounttoken(oldowner);
-	addaccounttoken(newowner);
+	addaccounttoken(to);
 
-	log(id, oldowner, newowner, "TRANSFER", memo);
+	log(id, from, to, "TRANSFER", memo);
 
-	notify(newowner);
+	notify(to);
 }
