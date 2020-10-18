@@ -71,23 +71,27 @@ public:
         uint64_t id;
 	    std::string uuid;
         std::string title;
-        name owner;
+        name        owner;
         std::string imageUrl;
         std::string category;
         std::string ext;
         std::string meta;
-        bool	   lock;
+        bool	    lock;
 
         //--ext-prop for this contract
         uint64_t	level;
-        time_point_sec	stackexpire;
 
-        asset		stackasset;
-        name		stacktoken;
+        //stack asset support
+        time_point_sec	stackexpire;
+        asset		    stackasset;
+
         uint64_t primary_key() const { return id; }
 	    uint64_t get_secondary_1() const { return owner.value;}
+        uint64_t get_secondary_2() const { return level;}
     };
-   typedef multi_index<"tokens"_n, token> token_index;
+   typedef multi_index<"tokens"_n, token, 
+        indexed_by<"byowner"_n, const_mem_fun<token, uint64_t, &token::get_secondary_1>>,
+        indexed_by<"bylevel"_n, const_mem_fun<token, uint64_t, &token::get_secondary_2>> > token_index;
 
 
     TABLE logs {
@@ -266,10 +270,10 @@ public:
     void updateext(const uint64_t id, const std::string ext);
 
     [[eosio::action]]
-    void transfer(const uint64_t id, const name newowner, const std::string memo);
+    void transfer(const uint64_t id, const name from, const name to, const std::string memo);
 
     [[eosio::action]]
-    void transmk(const uint64_t id, const name newowner, const std::string memo);
+    void transmk(const uint64_t id, const name from, const name to, const std::string memo);
 
     [[eosio::action]]
     void setparam(const uint64_t id, const std::string tag, const std::string val){
@@ -325,35 +329,15 @@ private:
 		auto iter = tokens.find(id);
 		check(iter != tokens.end(), "token not found");
 
-		if(iter->stackasset.amount > 0){
-			transfer(_self, iter->owner, iter->stackasset, "burn nft return asset");
-		}
-
 		subtokencount();
 		subaccounttoken(iter->owner);
 
 		log(id, _self, _self, "BURN", "");
 	}
 
-    inline void transfer(const name from,
-        const name to,
-        const eosio::asset& amount,
-        const std::string& memo)
-    {
-		if (from == to)
-		    return;
-		if (amount.symbol == TIME_SYMBOL)
-			action(permission_level{_self, "active"_n}, TIME_ACCOUNT, "transfer"_n, std::make_tuple(from, to, amount, memo)).send();
-		else if (amount.symbol == LOOT_SYMBOL)
-			action(permission_level{_self, "active"_n}, LOOT_ACCOUNT, "transfer"_n, std::make_tuple(from, to, amount, memo)).send();
-		else
-		    check(false, "only LOOT/TIME supported.");
-    }
-
     void notify(const name& to){
-		require_recipient(to);
+	    require_recipient(to);
     }
 
     void clearlog();
-
 };
