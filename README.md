@@ -15,193 +15,185 @@
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
 
 ```
-#include <eosiolib/asset.hpp>
-#include <eosiolib/contract.hpp>
-#include <eosiolib/currency.hpp>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/types.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
 #include <string>
+#include <math.h>
 
 #define max(a,b) (a>b?a:b)
 
-#define ASSET_EOS_SYMBOL S(4, EOS)
-#define EOS_ACCOUNT N(eosio.token)
-#define ASSET_XPC_SYMBOL S(4, XPC)
-#define XPC_ACCOUNT N(xpctokencore)
-#define LOG_EXPIRE_SECOND 3600
 
-#define SYSPARAM_TOKEN_COUNT        1
-#define SYSPARAM_MIN_LOG_ID         2
-#define SYSPARAM_MAX_LOG_ID         3
-#define SYSPARAM_ADMIN_ACCOUNT      4
-#define API_URL			    5
-#define CONTRACT_NAME		    6
-#define CONTRACT_LOGO		    7
+namespace eosiosystem {
+   class system_contract;
+}
+
+using namespace eosio;
+
+#define SYSPARAM_TOKEN_COUNT		1
+#define SYSPARAM_CONTRACT_ENABLE	2
+
+#define SYSPARAM_ADMIN_ACCOUNT		4
+#define API_URL				5
+#define CONTRACT_NAME			6
+#define CONTRACT_LOGO			7
+#define MIGRATE_COUNT			8
 
 
+#define HTML_TEMPLATE			10
+#define SYSPARAM_VERSION		11
 
-class eosnft : public eosio::contract {
+
+#define LOOT_SYMBOL symbol("LOOT", 4)
+#define TIME_SYMBOL symbol("TIME", 8)
+
+#define ASSET_USDT_SYMBOL S(4, USDT)
+#define USDT_ACCOUNT name("tethertether")
+
+#define ASSET_TIME_SYMBOL S(8, TIME)
+#define TIME_ACCOUNT name("xpettimetest")
+
+#define ASSET_LOOT_SYMBOL S(4, LOOT)
+#define LOOT_ACCOUNT name("lootglobcore")
+
+
+class [[eosio::contract("eosnft")]] eosnft : public contract
+{   
+
 public:
-    eosnft(account_name self)
-        : contract(self),
-        sysparams(_self, _self),
-        logs(_self, _self),
-        tokens(_self, _self),
-        accounts(_self, _self),
-	migrates(_self, _self),
-	blacklists(_self,_self)
-    {
-    }
 
-    /**
-     **/
-    void apply(account_name contract, uint64_t action);
+   using contract::contract;
 
-private:
-
-    // @abi table sysparam i64
-    struct sysparam {
-        uint64_t id;
-	std::string tag;
-        std::string value;
-
-
-        sysparam() = default;
-
-        EOSLIB_SERIALIZE(sysparam, (id)(tag)(value))
+   TABLE sysparam{
+        uint64_t	id;
+        std::string	tag;
+        std::string	val;
 
         uint64_t primary_key() const { return id; }
-
-    };
-    static constexpr uint64_t SYSPARAM_TABLE_NAME = N(sysparam);
-    using sysparam_list = eosio::multi_index<SYSPARAM_TABLE_NAME, sysparam>;
-
+   };
+   typedef multi_index<"sysparams"_n, sysparam> sysparam_index;
     
-    // @abi table token i64
-    struct token {
-        uint64_t id;
-	std::string uuid;
-        std::string name;
-	account_name owner;
-	std::string imageUrl;
-	std::string category;
-	std::string ext;
-	std::string meta;
-	bool lock;
-
-        token() = default;
-        
-        EOSLIB_SERIALIZE(token, (id)(uuid)(name)(owner)(imageUrl)(category)(ext)(meta)(lock))
-       
-        uint64_t primary_key() const { return id; }
-    };
-    static constexpr uint64_t TOKEN_TABLE_NAME = N(token);
-    using token_list = eosio::multi_index<TOKEN_TABLE_NAME, token>;
-
  
-     // @abi table accounts i64
-    struct accounts {
-        account_name id;
+    TABLE accounts {
+        name id;
 
         uint64_t count;
 
-        EOSLIB_SERIALIZE(accounts, (id)(count))
-
-        account_name primary_key() const { return id; }
+        uint64_t primary_key() const { return id.value; }
     };
-    static constexpr account_name LOOTPAY_TABLE_NAME = N(accounts);
-    using account_list = eosio::multi_index<LOOTPAY_TABLE_NAME, accounts>;
+    typedef multi_index<"accounts"_n, accounts> account_index;
 
 
-    // @abi table logs i64
-    struct logs {
+    TABLE token {
         uint64_t id;
-	account_name from;
-	account_name to;
-	std::string memo;
-	uint64_t acttime;
-	uint64_t tokenId;
+	    std::string uuid;
+        std::string title;
+        name        owner;
+        std::string imageUrl;
+        std::string category;
+        std::string ext;
+        std::string meta;
+        bool	    lock;
 
-        EOSLIB_SERIALIZE(logs, (id)(from)(to)(memo)(acttime)(tokenId))
+        //--ext-prop for this contract
+        uint64_t	level;
 
-        uint64_t primary_key() const { return id; }
-    };
-    static constexpr uint64_t LOG_TABLE_NAME = N(logs);
-    using log_list = eosio::multi_index<LOG_TABLE_NAME, logs>;
-
-    // @abi table blacklist i64
-    struct blacklist{
-        account_name	id;
-
-        EOSLIB_SERIALIZE(blacklist, (id))
-
-        account_name primary_key() const { return id; }
-    };
-    static constexpr account_name BLACKLIST_TABLE_NAME = N(blacklist);
-    using blacklist_list = eosio::multi_index<BLACKLIST_TABLE_NAME, blacklist>;
-
-    // @abi table migrate i64
-    struct migrate{
-        uint64_t	id;
-	std::string	target;
-
-        EOSLIB_SERIALIZE(migrate, (id)(target))
+        //stack asset support
+        time_point_sec	stackexpire;
+        asset		    stackasset;
 
         uint64_t primary_key() const { return id; }
+	    uint64_t get_secondary_1() const { return owner.value;}
+        uint64_t get_secondary_2() const { return level;}
     };
-    static constexpr uint64_t MIGRATE_TABLE_NAME = N(migrate);
-    using migrate_list = eosio::multi_index<MIGRATE_TABLE_NAME, migrate>;
+   typedef multi_index<"tokens"_n, token, 
+        indexed_by<"byowner"_n, const_mem_fun<token, uint64_t, &token::get_secondary_1>>,
+        indexed_by<"bylevel"_n, const_mem_fun<token, uint64_t, &token::get_secondary_2>> > token_index;
+
+
+    TABLE logs {
+        uint64_t id;
+        name from;
+        name to;
+        std::string memo;
+        uint64_t acttime;
+        uint64_t tokenId;
+        uint64_t primary_key() const { return id; }
+    };
+    typedef multi_index<"logs"_n, logs> log_index;
+
 
  private:
-    account_list accounts;
-    token_list tokens;
-    log_list logs;
-    sysparam_list sysparams;
-    migrate_list migrates;
-    blacklist_list blacklists;
- private:
-     account_name get_admin() const {
+
+     double stringtodouble(std::string str) {
+        double dTmp = 0.0;
+        int iLen = str.length();
+        int iPos = str.find(".");
+        std::string strIntege = str.substr(0,iPos);
+        std::string strDecimal = str.substr(iPos + 1,iLen - iPos - 1 );
+        for (int i = 0; i < iPos;i++)
+        {
+        if (strIntege[i] >= '0' && strIntege[i] <= '9')
+        {
+        dTmp = dTmp * 10 + strIntege[i] - '0';
+        }
+        }
+        for (int j = 0; j < strDecimal.length(); j++)
+        {
+        if (strDecimal[j] >= '0' && strDecimal[j] <= '9')
+        {
+        dTmp += (strDecimal[j] - '0') * pow(10.0,(0 - j - 1));
+        }
+        }
+        return dTmp;
+     }
+
+
+     name get_admin() const {
          const std::string adminAccount = getsysparam(SYSPARAM_ADMIN_ACCOUNT);
          if (adminAccount.empty()) {
              return _self;
          }
          else {
-             return eosio::string_to_name(adminAccount.c_str());
+             return name(adminAccount.c_str());
          }
      }
 
-     void require_auth_admin() const { eosio::require_auth(get_admin()); }
+     void require_auth_admin() const { require_auth(get_admin()); }
 
-     void require_auth_contract() const { eosio::require_auth(_self); }
+     void require_auth_contract() const { require_auth( _self );}
      
      inline std::string getsysparam(const uint64_t& key) const {
-       auto iter = sysparams.find(key);
-       if(iter == sysparams.end()){
-	        return std::string("");
-       }else{
-	        return iter->value;
-       }
+        sysparam_index sysparams(_self, _self.value);
+        auto iter = sysparams.find(key);
+        if(iter == sysparams.end()){
+                return std::string("");
+        }else{
+                return iter->val;
+        }
     }
 
     
     inline void setsysparam(const uint64_t& id, const std::string& tag, const std::string& val){
+	    sysparam_index sysparams(_self, _self.value);
 	    auto iter = sysparams.find(id);
 	    if(iter == sysparams.end()){
 		    sysparams.emplace(_self, [&](auto& p) {
-		        p.id = id;
-		        p.value=val;
+		        p.id  = id;
+		        p.val = val;
 			p.tag = tag;
 		    });
 	    }else{
 		    sysparams.modify(iter, _self, [&](auto& p) {
-			    p.value = val;
+			    p.val = val;
 			    p.tag = tag;
 		    });
 	    }
     }
 
-    inline void addaccounttoken(const account_name& user) {
-        auto iter = accounts.find(user);
+    inline void addaccounttoken(const name user) {
+	    account_index accounts(_self, _self.value);
+        auto iter = accounts.find(user.value);
         if (iter == accounts.end()) {
             accounts.emplace(_self, [&](auto& p) {
                 p.id = user;
@@ -215,25 +207,26 @@ private:
         }
     }
 
-    inline void subaccounttoken(const account_name& user) {
-        auto iter = accounts.find(user);
-        if (iter == accounts.end()) {
-            return ;
+    inline void subaccounttoken(const name user) {
+        account_index accounts(_self, _self.value);
+            auto iter = accounts.find(user.value);
+            if (iter == accounts.end()) {
+                return ;
+            }
+            
+        if(iter->count > 1){
+                accounts.modify(iter, _self, [&](auto& p) {
+                    if (p.count > 1){
+                        p.count -= 1;
+                    }
+            });
+            }else{
+        accounts.erase(iter);
         }
-        
-	if(iter->count > 1){
-            accounts.modify(iter, _self, [&](auto& p) {
-                if (p.count > 1){
-                    p.count -= 1;
-                }
-           });
-        }else{
-	   accounts.erase(iter);
-	}
     }
     
     inline uint64_t toInt(const std::string& str) {
-        if (str.empty()) {
+        if (str.empty() || str == "") {
             return 0;
         }
         else {
@@ -242,121 +235,128 @@ private:
         }
     }
     
-    inline uint64_t getminlogid() {
-        return toInt(getsysparam(SYSPARAM_MIN_LOG_ID));
-    }
+    void log(const uint64_t& id, const name& oldowner, const name& newowner, const std::string& opcode, const std::string& ext);
+
     
-    inline uint64_t getmaxlogid() {
-        return toInt(getsysparam(SYSPARAM_MAX_LOG_ID));
-    }
-
-    inline void setminlogid(const uint64_t id) {
-        setsysparam(SYSPARAM_MIN_LOG_ID, "SYSPARAM_MIN_LOG_ID", std::to_string(id));
-    }
-
-    inline void setmaxlogid(const uint64_t id) {
-        setsysparam(SYSPARAM_MAX_LOG_ID, "SYSPARAM_MAX_LOG_ID", std::to_string(id));
-    }
-
-    void logoperator(const uint64_t& id, const account_name& oldowner, const account_name& newowner, const std::string& opcode, const std::string& ext);
-
-    void clearlog();
-
     inline uint64_t gettokencount(){
-	return toInt(getsysparam(SYSPARAM_TOKEN_COUNT));
+	    return toInt(getsysparam(SYSPARAM_TOKEN_COUNT));
     }
+
 
     inline void addtokencount(){
-	setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(gettokencount() + 1));
+	    setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(gettokencount() + 1));
     }
 
     inline void subtokencount(){
         uint64_t tokencount = gettokencount();
-	if(tokencount > 0){
-	    setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(tokencount - 1));
-	}
+        if(tokencount > 0){
+            setsysparam(SYSPARAM_TOKEN_COUNT, "SYSPARAM_TOKEN_COUNT", std::to_string(tokencount - 1));
+        }
     }
 
-    inline void migratecheck(uint64_t id){
-        auto iter = migrates.find(id);
-	eosio_assert(iter == migrates.end(), "id is in migrates");
-    }
-
-    inline void blackcheck(const account_name acc){
-	auto iter = blacklists.find(acc);
-	eosio_assert(iter == blacklists.end(), "acc is in black");
-    }
 
 
  public:
 
-     // @abi action
-    void init(const std::string adminacc, const std::string apiUrl, const std::string name, const std::string image){
-	require_auth_contract();
-	setsysparam(SYSPARAM_ADMIN_ACCOUNT, "SYSPARAM_ADMIN_ACCOUNT", adminacc);
-	setsysparam(API_URL, "API_URL", apiUrl);
-	setsysparam(CONTRACT_NAME, "CONTRACT_NAME", name);	
-	setsysparam(CONTRACT_LOGO, "CONTRACT_LOGO", image);	
+     [[eosio::action]]
+    void init(const std::string adminacc, const std::string apiUrl, const std::string title, const std::string image){
+        require_auth_contract();
+        setsysparam(SYSPARAM_ADMIN_ACCOUNT, "SYSPARAM_ADMIN_ACCOUNT", adminacc);
+        setsysparam(API_URL, "API_URL", apiUrl);
+        setsysparam(CONTRACT_NAME, "CONTRACT_NAME", title);	
+        setsysparam(CONTRACT_LOGO, "CONTRACT_LOGO", image);	
     }
  
-    // @abi action
-    void assign(const uint64_t id, const account_name newowner);
+    [[eosio::action]]
+    void assign(const uint64_t id, const name newowner);
 
-    // @abi action
-    void reassign(const uint64_t id, const account_name newowner);
+    [[eosio::action]]
+    void reassign(const uint64_t id, const name newowner);
     
-    // @abi action
-    void create(const uint64_t id, const std::string uuid, const std::string category, const std::string name, const std::string imageUrl, const std::string meta, const bool lock, const std::string ext);
+    [[eosio::action]]
+    void create(const uint64_t id, const std::string uuid, const std::string category, 
+        std::string title, std::string imageUrl, std::string meta, const bool lock, const std::string ext,  const uint64_t level);
 
-    // @abi action
-    void updatemeta(const uint64_t id, const std::string name, const std::string category, const std::string imageUrl, const std::string meta);
+    [[eosio::action]]
+    void updatemeta(const uint64_t id, const std::string title, const std::string category, const std::string imageUrl, const std::string meta);
 
-    // @abi action
+    [[eosio::action]]
     void updatelock(const uint64_t id, const bool lock);
 
-    // @abi action
-    void transfer(const uint64_t id, const account_name newowner, const std::string memo);
+    [[eosio::action]]
+    void updateext(const uint64_t id, const std::string ext);
 
-    // @abi action
-    void setparam(const uint64_t id, const std::string tag, const std::string val);
+    [[eosio::action]]
+    void transfer(const uint64_t id, const name from, const name to, const std::string memo);
 
-    // @abi action
-    void burn(const uint64_t id);
+    [[eosio::action]]
+    void transmk(const uint64_t id, const name from, const name to, const std::string memo);
 
-    // @abi action
-    void rmlog(const uint64_t id){
-	require_auth_contract();
-	logs.erase(logs.begin());
+    [[eosio::action]]
+    void setparam(const uint64_t id, const std::string tag, const std::string val){
+	    require_auth_contract();
+	    setsysparam(id,tag,val);
     }
 
-    // @abi action
-    void applymigrate(const uint64_t id, const std::string target);
+    [[eosio::action]]
+    void burn(const uint64_t id){
+        require_auth_admin();
+        rmtoken_(id);
+    }
 
-    // @abi action
-    void apprmigrate(const uint64_t id, const bool approve){
-	require_auth_admin();
-	
-	migrates.erase(migrates.find(id));
-	
-	if(approve){
-	   burn(id);
+
+    [[eosio::action]]
+    void stackasset(const uint64_t id, const asset quantity, const time_point_sec stackexpire){
+        require_auth_admin();
+        token_index tokens(_self, _self.value);
+        auto iter = tokens.find(id);
+        check(iter != tokens.end(), "token not found");
+        tokens.modify(iter, _self, [&](auto& p) {
+                    p.stackasset = quantity;
+                    p.stackexpire = stackexpire;
+        });
+    }
+
+
+    //---- for debug 
+    
+    [[eosio::action]]
+    void rmtoken(const uint64_t id){
+        require_auth_contract();
+        rmtoken_(id);
+    }
+
+    [[eosio::action]]
+    void rmaccount(const name acc){
+        require_auth_contract();
+        account_index accounts(_self, _self.value);
+        accounts.erase(accounts.find(acc.value));
+    }
+
+    [[eosio::action]]
+    void rmparam(const uint64_t id){
+        require_auth_contract();
+        sysparam_index sysparams(_self, _self.value);
+        sysparams.erase(sysparams.find(id));
+    }
+
+private:
+	void rmtoken_(const uint64_t id){	
+		token_index tokens(_self, _self.value);
+		auto iter = tokens.find(id);
+		check(iter != tokens.end(), "token not found");
+
+		subtokencount();
+		subaccounttoken(iter->owner);
+
+		log(id, _self, _self, "BURN", "");
 	}
+
+    void notify(const name& to){
+	    require_recipient(to);
     }
 
-    // @abi action
-    void addblack(const account_name acc){
-	require_auth_admin();
-	blackcheck(acc);
-	blacklists.emplace(_self, [&](auto& p) {
-		p.id = acc;
-	});
-    }
-
-    // @abi action
-    void rmblack(const account_name acc){
-	require_auth_admin();
-	blacklists.erase(blacklists.find(acc));
-    }
+    void clearlog();
 };
 
 ```
