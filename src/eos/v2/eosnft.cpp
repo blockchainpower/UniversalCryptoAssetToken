@@ -1,39 +1,47 @@
 #include "eosnft.hpp"
 
-void eosnft::create(const uint64_t id, const std::string uuid, const std::string category, std::string title,
- 	std::string imageUrl, std::string meta, const bool lock, const std::string ext,  const uint64_t level){
+void eosnft::create(const uint64_t id, const name owner, std::string title, std::string cate, std::string imageUrl, const bool lock, const uint64_t level, const uint64_t quality , const asset parvalue){
 	require_auth_admin();
 
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, owner.value);
 
 	auto iter = tokens.find(id);
 	check(iter == tokens.end(), "asset exisit");
 
 	tokens.emplace(_self, [&](auto& p) {
 		p.id = id;
-		p.owner = get_admin();
-		p.category = category;
+		p.owner = owner;
 		p.title = title;
 		p.imageUrl = imageUrl;
-		p.meta = meta;
-		p.uuid = uuid;
+		
+		p.uuid = std::to_string(id);
 		p.lock = lock;
-		p.ext = ext;
+		
+		p.category = cate;
+		p.meta = "";
+		p.ext = "";
+
 		p.level = level;
-		});
+		p.quality = quality;
+		p.parvalue = parvalue;
+		p.stackexpire = time_point_sec(current_time_point().sec_since_epoch() + 31536000);
+	});
+
 	addtokencount();
 
-	log(id, get_admin(), get_admin(), "CREATE", "");
+	addaccounttoken(owner);
+	
+	log(id, owner, get_admin(), "CREATE", std::to_string(id));
 }
 
-void eosnft::assign(const uint64_t id, name newowner){
+void eosnft::assign(const uint64_t id, const name owner, name newowner){
 	require_auth_admin();
 
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, owner.value);
 
 	auto iter = tokens.find(id);
 
-    check(iter != tokens.end(), "asset not exisit");
+    check(iter != tokens.end(), "asset not exisit ");
 
 	eosio::require_auth(iter->owner);
 
@@ -46,10 +54,10 @@ void eosnft::assign(const uint64_t id, name newowner){
 	log(id, get_admin(), newowner, "ASSIGN", "");
 }
 
-void eosnft::reassign(const uint64_t id, name newowner){
+void eosnft::reassign(const uint64_t id, const name owner, name newowner){
 	require_auth_admin();
 
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, owner.value);
 
 	auto iter = tokens.find(id);
 
@@ -104,10 +112,10 @@ void eosnft::clearlog() {
 	iter = logs.begin();
 }
 
-void eosnft::updatemeta(const uint64_t id, const std::string title, const std::string category, const std::string imageUrl, const std::string meta){
+void eosnft::updatemeta(const uint64_t id, const name owner, const std::string title, const std::string category, const std::string imageUrl, const std::string meta){
 	require_auth_admin();
 	
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, owner.value);
 	auto iter = tokens.find(id);
 
     check(iter != tokens.end(), "asset not exisit");
@@ -120,9 +128,9 @@ void eosnft::updatemeta(const uint64_t id, const std::string title, const std::s
 	log(id, iter->owner, iter->owner, "UPDATE", "");
 }
 
-void eosnft::updatelock(const uint64_t id, const bool lock){
+void eosnft::updatelock(const uint64_t id, const name owner, const bool lock){
 	require_auth_admin();
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, owner.value);
 	auto iter = tokens.find(id);
     check(iter != tokens.end(), "asset not exisit");
 	tokens.modify(iter, _self, [&](auto& p) {
@@ -131,9 +139,9 @@ void eosnft::updatelock(const uint64_t id, const bool lock){
 	log(id, iter->owner, iter->owner, "UPDATE", "");
 }
 
-void eosnft::updateext(const uint64_t id, const std::string ext){
+void eosnft::updateext(const uint64_t id, const name owner, const std::string ext){
 	require_auth_admin();
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, owner.value);
 	auto iter = tokens.find(id);
     check(iter != tokens.end(), "asset not exisit");
 	tokens.modify(iter, _self, [&](auto& p) {
@@ -147,9 +155,7 @@ void eosnft::transmk(const uint64_t id, const name from, const name to, const st
 }
 
 void eosnft::transfer(const uint64_t id, const name from, const name to, const std::string memo){
-	check(is_account(to), "new owner should be an account");
-
-	token_index tokens(_self, _self.value);
+	token_index tokens(_self, from.value);
     auto iter = tokens.find(id);
 
     check(iter != tokens.end(), "unknow asset");
@@ -161,9 +167,27 @@ void eosnft::transfer(const uint64_t id, const name from, const name to, const s
 	check(oldowner != to, "asset aleady yours");
 	check(from == iter->owner, "owner unmatch");
 
-	tokens.modify(iter, _self, [&](auto& p) {
-        p.owner = to;
-    });
+	token_index newtokens(_self, to.value);
+	newtokens.emplace(_self, [&](auto& p) {
+		p.id = id;
+		p.owner = to;
+		p.title = iter->title;
+		p.imageUrl = iter->imageUrl;
+		
+		p.uuid = iter->uuid;
+		p.lock = iter->lock;
+		
+		p.category = iter->category;
+		p.meta = iter->meta;
+		p.ext = iter->ext;
+
+		p.level = iter->level;
+		p.quality = iter->quality;
+		p.parvalue = iter->parvalue;
+		p.stackexpire = iter->stackexpire;
+	});
+
+	tokens.erase(iter);
 
 	subaccounttoken(oldowner);
 	addaccounttoken(to);
