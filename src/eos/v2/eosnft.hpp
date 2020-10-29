@@ -17,27 +17,13 @@ using namespace eosio;
 #define SYSPARAM_CONTRACT_ENABLE	2
 
 #define SYSPARAM_ADMIN_ACCOUNT		4
-#define API_URL				5
-#define CONTRACT_NAME			6
-#define CONTRACT_LOGO			7
-#define MIGRATE_COUNT			8
+#define CONTRACT_NAME			    6
+#define CONTRACT_LOGO			    7
 
 
 #define HTML_TEMPLATE			10
 #define SYSPARAM_VERSION		11
 
-
-#define LOOT_SYMBOL symbol("LOOT", 4)
-#define TIME_SYMBOL symbol("TIME", 8)
-
-#define ASSET_USDT_SYMBOL S(4, USDT)
-#define USDT_ACCOUNT name("tethertether")
-
-#define ASSET_TIME_SYMBOL S(8, TIME)
-#define TIME_ACCOUNT name("xpettimetest")
-
-#define ASSET_LOOT_SYMBOL S(4, LOOT)
-#define LOOT_ACCOUNT name("lootglobcore")
 
 
 class [[eosio::contract("eosnft")]] eosnft : public contract
@@ -69,7 +55,7 @@ public:
 
     TABLE token {
         uint64_t id;
-	    std::string uuid;
+	std::string uuid;
         std::string title;
         name        owner;
         std::string imageUrl;
@@ -80,13 +66,17 @@ public:
 
         //--ext-prop for this contract
         uint64_t	level;
+        uint64_t    quality;
+        asset		parvalue;
+        time_point_sec	stackexpire;  
 
-        //stack asset support
-        time_point_sec	stackexpire;
-        asset		    stackasset;
+        uint64_t minepower(){
+            return 0;
+        }      
+	    
 
         uint64_t primary_key() const { return id; }
-	    uint64_t get_secondary_1() const { return owner.value;}
+	uint64_t get_secondary_1() const { return owner.value;}
         uint64_t get_secondary_2() const { return level;}
     };
    typedef multi_index<"tokens"_n, token, 
@@ -242,32 +232,30 @@ public:
  public:
 
      [[eosio::action]]
-    void init(const std::string adminacc, const std::string apiUrl, const std::string title, const std::string image){
+    void init(const std::string adminacc, const std::string title, const std::string image){
         require_auth_contract();
         setsysparam(SYSPARAM_ADMIN_ACCOUNT, "SYSPARAM_ADMIN_ACCOUNT", adminacc);
-        setsysparam(API_URL, "API_URL", apiUrl);
         setsysparam(CONTRACT_NAME, "CONTRACT_NAME", title);	
         setsysparam(CONTRACT_LOGO, "CONTRACT_LOGO", image);	
     }
  
     [[eosio::action]]
-    void assign(const uint64_t id, const name newowner);
+    void assign(const uint64_t id, const name owner, const name newowner);
 
     [[eosio::action]]
-    void reassign(const uint64_t id, const name newowner);
-    
+    void reassign(const uint64_t id, const name owner, const name newowner);
+       
     [[eosio::action]]
-    void create(const uint64_t id, const std::string uuid, const std::string category, 
-        std::string title, std::string imageUrl, std::string meta, const bool lock, const std::string ext,  const uint64_t level);
+    void create(const uint64_t id, const name owner, std::string title, std::string cate, std::string imageUrl, const bool lock, const uint64_t level, const uint64_t quality , const asset parvalue);
 
     [[eosio::action]]
-    void updatemeta(const uint64_t id, const std::string title, const std::string category, const std::string imageUrl, const std::string meta);
+    void updatemeta(const uint64_t id, const name owner, const std::string title, const std::string category, const std::string imageUrl, const std::string meta);
 
     [[eosio::action]]
-    void updatelock(const uint64_t id, const bool lock);
+    void updatelock(const uint64_t id, const name owner, const bool lock);
 
     [[eosio::action]]
-    void updateext(const uint64_t id, const std::string ext);
+    void updateext(const uint64_t id, const name owner, const std::string ext);
 
     [[eosio::action]]
     void transfer(const uint64_t id, const name from, const name to, const std::string memo);
@@ -282,31 +270,17 @@ public:
     }
 
     [[eosio::action]]
-    void burn(const uint64_t id){
+    void burn(const uint64_t id, const name owner){
         require_auth_admin();
-        rmtoken_(id);
+        rmtoken_(id, owner);
     }
-
-
-    [[eosio::action]]
-    void stackasset(const uint64_t id, const asset quantity, const time_point_sec stackexpire){
-        require_auth_admin();
-        token_index tokens(_self, _self.value);
-        auto iter = tokens.find(id);
-        check(iter != tokens.end(), "token not found");
-        tokens.modify(iter, _self, [&](auto& p) {
-                    p.stackasset = quantity;
-                    p.stackexpire = stackexpire;
-        });
-    }
-
 
     //---- for debug 
     
     [[eosio::action]]
-    void rmtoken(const uint64_t id){
+    void rmtoken(const uint64_t id, const name owner){
         require_auth_contract();
-        rmtoken_(id);
+        rmtoken_(id, owner);
     }
 
     [[eosio::action]]
@@ -324,10 +298,12 @@ public:
     }
 
 private:
-	void rmtoken_(const uint64_t id){	
-		token_index tokens(_self, _self.value);
+	void rmtoken_(const uint64_t id, const name& owner){	
+		token_index tokens(_self, owner.value);
 		auto iter = tokens.find(id);
 		check(iter != tokens.end(), "token not found");
+
+	        tokens.erase(iter);
 
 		subtokencount();
 		subaccounttoken(iter->owner);
