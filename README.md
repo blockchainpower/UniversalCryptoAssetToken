@@ -1,22 +1,22 @@
-Universal Crypto Asset Token(UCAT)
-Simple Summary
-A standard interface for cross chain non-fungible tokens(NFT).
+# Universal Crypto Asset Token(UCAT)
+# Simple Summary
+	A standard interface for cross chain non-fungible tokens(NFT).
 
-Abstract
-The following standard allows the implementation of a standard API for NFTs within EOS/IOST/ETH smart contracts. This standard provides basic functionality to track and transfer NFTs.
+# Abstract
+	The following standard allows the implementation of a standard API for NFTs within EOS/IOST/ETH smart contracts. This standard provides basic functionality to track and transfer NFTs.
 
-NFTs can represent ownership over digital assets.
+## NFTs can represent ownership over digital assets.
 
-Motivation
-A standard interface allows wallet/broker/auction applications to work with any NFT on EOS/IOST/ETH blockchain. A simple EOS/IOST smart contract is provided.
+## Motivation 
+	A standard interface allows wallet/broker/auction applications to work with any NFT on EOS/IOST/ETH blockchain. A simple EOS/IOST smart contract is provided.
 
-Specification
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
+# Specification
+	The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
 
-Last Update
-UCAT V2 support NFT level and stacket asset.
+# Last Update
+	UCAT V2 support NFT level and stacket asset.
 
---------------------------------------------------------------------------
+```
 
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
@@ -361,3 +361,4 @@ private:
 
     void clearlog();
 };
+```
