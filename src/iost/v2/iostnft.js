@@ -731,19 +731,11 @@ class NFT {
         for(var i=beginid; i<=endid; ++i){
             var tokeninfo = this._get(tokenPrefix + i);
             if(tokeninfo){
-                this.addusernft(tokeninfo.owner,i);
-                return this._msg(200, "success");
+                this.addusernft(tokeninfo.owner,i);        
             }
         }
-        throw "token not found";
+	return this._msg(200, "success");
     }
-
-    rmudatanft(owner, tokenid){
-        this._requireAuth();
-        this.removeusernft(owner, tokenid);
-        return this._msg(200, "success");
-    }
-
 }
 
 module.exports = NFT;
