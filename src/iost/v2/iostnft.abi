@@ -1,0 +1,155 @@
+{
+  "lang": "javascript",
+  "version": "1.0.0",
+  "abi": [
+    {
+      "name": "can_update",
+      "args": ["string"]
+    },
+    {
+      "name": "rmLog",
+      "args": [
+      ]
+    },
+    {
+      "name": "issue",
+      "args": [
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "reassign",
+      "args": [
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "create",
+      "args": [
+          "number",
+          "string",
+          "string",
+          "string",
+          "string",
+          "string",
+          "string",
+          "string",
+          "number",
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "updatemeta",
+      "args": [
+          "number",
+          "string",
+          "string",
+          "string",
+          "string"
+      ]
+    },
+    {
+      "name": "updateext",
+      "args": [
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "updatelock",
+      "args": [
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "transfer",
+      "args": [
+          "number",
+	        "string",
+          "string",
+	        "string",
+          "string"
+      ]
+    },
+    {
+      "name": "rmtoken",
+      "args": [
+          "number"
+      ]
+    },
+    {
+      "name": "ownerOf",
+      "args": [
+          "number"
+      ]
+    },
+    {
+      "name": "tokenMetadata",
+      "args": [
+          "number"
+      ]
+    },
+    {
+      "name": "tokenInfo",
+      "args": [
+          "number"
+      ]
+    },
+    {
+      "name": "nftInfo",
+      "args": []
+    },
+    {
+      "name": "addblack",
+      "args": [
+          "string"
+      ]
+    },
+    {
+      "name": "rmblack",
+      "args": [
+          "string"
+      ]
+    },
+    {
+      "name": "applymigrate",
+      "args": [
+          "number",
+          "string",
+          "string"
+      ]
+    },
+    {
+      "name": "apprmigrate",
+      "args": [
+          "number",
+          "string"
+      ]
+    },
+    {
+      "name": "burn",
+      "args": [
+          "number"
+      ]
+    }
+    ,
+    {
+      "name": "formatudata",
+      "args": [
+          "number",
+          "number"
+      ]
+    },
+    {
+      "name": "rmudatanft",
+      "args": [
+          "string",
+          "number"
+      ]
+    }
+  ]
+}
