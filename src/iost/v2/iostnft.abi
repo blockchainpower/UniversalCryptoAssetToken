@@ -143,13 +143,6 @@
           "number",
           "number"
       ]
-    },
-    {
-      "name": "rmudatanft",
-      "args": [
-          "string",
-          "number"
-      ]
     }
   ]
 }
