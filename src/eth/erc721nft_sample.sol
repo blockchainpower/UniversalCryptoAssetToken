@@ -8,7 +8,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 
 
-contract ERC721NFT is ERC721Enumerable, Ownable, CurrencySymbol {
+contract ERC721NFT is ERC721Enumerable, Ownable{
     
     using Counters for Counters.Counter;
 
